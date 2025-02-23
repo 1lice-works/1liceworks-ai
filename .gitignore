@@ -1,5 +1,17 @@
 # created by virtualenv automatically
-./1liceworks-ai/apiKey.env
+./1liceworks-ai/.env
 ../.venv
-../.idea
+./.idea
 *.env
+*.xml
+
+.idea/
+.vscode/
+.venv*/
+venv*/
+__pycache__/
+dist/
+.coverage*
+htmlcov/
+.tox/
+docs/_build/
