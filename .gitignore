@@ -1,0 +1,5 @@
+# created by virtualenv automatically
+./1liceworks-ai/apiKey.env
+../.venv
+../.idea
+*.env
