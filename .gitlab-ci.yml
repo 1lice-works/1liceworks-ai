@@ -7,7 +7,6 @@ variables:
 before_script:
   - echo "Deploying Flask App..."
   - cd $PROJECT_DIR
-  - git clone https://kdt-gitlab.elice.io/pttrack/class_01/web_project_ii/team01/1liceworks-ai.git
   - git checkout main
   - git pull origin main
   - source venv/bin/activate
@@ -20,6 +19,7 @@ deploy:
     - export GEMINI_API_KEY=$GEMINI_API_KEY
     - pip install -r requirements.txt
     - pkill -f gunicorn || true
+    - cd $PROJECT_DIR/1liceworks-ai/1liceworks-ai
     - gunicorn -w 4 -b 0.0.0.0:5000 app:app --daemon
   only:
     - main
