@@ -1,0 +1,21 @@
+stages:
+  - deploy
+
+variables:
+  PROJECT_DIR: "/home/kdt/1liceworks-ai"
+
+before_script:
+  - echo "Deploying Flask App..."
+  - cd $PROJECT_DIR
+  - git checkout main
+  - git pull origin main
+  - source venv/bin/activate
+
+deploy:
+  stage: deploy
+  script:
+    - pip install -r requirements.txt
+    - pkill -f gunicorn || true
+    - gunicorn -w 4 -b 0.0.0.0:5000 app:app --daemon
+  only:
+    - main
