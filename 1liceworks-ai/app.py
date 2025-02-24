@@ -163,6 +163,9 @@ def find_free_time():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/')
+def home():
+    return "Flask 서버가 정상 실행 중입니다."
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
