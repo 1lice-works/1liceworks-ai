@@ -10,6 +10,8 @@ before_script:
   - git config --global --add safe.directory $PROJECT_DIR/1liceworks-ai
   - sudo chown -R gitlab-runner:gitlab-runner $PROJECT_DIR/1liceworks-ai
   - cd 1liceworks-ai/
+  - git config --global credential.helper store
+  - echo "https://$GITLAB_USERNAME:$GITLAB_PASSWORD@kdt-gitlab.elice.io" > ~/.git-credentials
   - git checkout main
   - git pull origin main
   - cd ..
