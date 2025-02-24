@@ -7,8 +7,6 @@ variables:
 before_script:
   - echo "Deploying Flask App..."
   - echo "Checking GitLab Variables..."
-  - echo "GITLAB_USERNAME: $GITLAB_USERNAME"
-  - echo "GITLAB_PASSWORD: $GITLAB_PASSWORD"
   - cd $PROJECT_DIR
   - git config --global --add safe.directory $PROJECT_DIR/1liceworks-ai
   - sudo chown -R gitlab-runner:gitlab-runner $PROJECT_DIR/1liceworks-ai
