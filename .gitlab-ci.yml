@@ -13,6 +13,8 @@ before_script:
 
 deploy:
   stage: deploy
+  tags:
+    - all
   script:
     - export GEMINI_API_KEY=$GEMINI_API_KEY
     - pip install -r requirements.txt
