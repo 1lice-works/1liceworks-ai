@@ -2,12 +2,13 @@ stages:
   - deploy
 
 variables:
-  PROJECT_DIR: "/home/kdt/1liceworks-ai/"
+  PROJECT_DIR: "/home/kdt/1liceworks-ai"
 
 before_script:
   - echo "Deploying Flask App..."
   - cd $PROJECT_DIR
-  - git config --global --add safe.directory /home/kdt/1liceworks-ai/1liceworks-ai
+  - git config --global --add safe.directory $PROJECT_DIR/1liceworks-ai
+  - sudo chown -R gitlab-runner:gitlab-runner $PROJECT_DIR/1liceworks-ai
   - cd 1liceworks-ai/
   - git checkout main
   - git pull origin main
