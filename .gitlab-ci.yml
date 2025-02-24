@@ -2,7 +2,7 @@ stages:
   - deploy
 
 variables:
-  PROJECT_DIR: "/home/kdt/1liceworks-ai"
+  PROJECT_DIR: "/home/kdt/1liceworks-ai/1liceworks-ai"
 
 before_script:
   - echo "Deploying Flask App..."
@@ -19,7 +19,7 @@ deploy:
     - export GEMINI_API_KEY=$GEMINI_API_KEY
     - pip install -r requirements.txt
     - pkill -f gunicorn || true
-    - cd $PROJECT_DIR/1liceworks-ai/1liceworks-ai
+    - cd $PROJECT_DIR/1liceworks-ai/
     - gunicorn -w 4 -b 0.0.0.0:5000 app:app --daemon
   only:
     - main
