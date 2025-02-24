@@ -7,7 +7,7 @@ variables:
 before_script:
   - echo "Deploying Flask App..."
   - cd $PROJECT_DIR
-  - git clone https://kdt-gitlab.elice.io/pttrack/class_01/web_project_ii/team01/1liceworks-ai.git .
+  - git clone https://kdt-gitlab.elice.io/pttrack/class_01/web_project_ii/team01/1liceworks-ai.git
   - git checkout main
   - git pull origin main
   - source venv/bin/activate
