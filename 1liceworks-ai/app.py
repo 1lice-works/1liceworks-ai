@@ -30,7 +30,7 @@ def generate_schedule():
 
         # 현재 한국 시간 계산
         now_kst = datetime.now(KST)
-        now_kst_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
+        now_kst_str = now_kst.strftime("%Y-%m-%dT%H:%M:%S")
 
         prompt = f"""
         당신은 일정 생성 AI 비서입니다.
@@ -42,8 +42,8 @@ def generate_schedule():
         다음 JSON 형식으로 일정을 반환하세요:
         {{"title": "일정 제목" 유추 가능하면 해당 값 불가능하면 일정,
           "description": 유추 가능하면 해당 값, 불가능하면 null,
-          "dtStartTime": "YYYY-MM-DDTHH:MM:SS",
-          "dtEndTime": "YYYY-MM-DDTHH:MM:SS" 유추 불가능하면 dtStartTime의 1시간 후,
+          "dtStartTime": "yyyy-MM-dd'T'HH:mm:ss",
+          "dtEndTime": "yyyy-MM-dd'T'HH:mm:ss" 유추 불가능하면 dtStartTime의 1시간 후,
           "isAllDay": 유추 가능하면 true 또는 false, 불가능하면 false,
           "privacyType": 유추 가능하면 "PUBLIC" 또는 "PRIVATE", 불가능하면 "PRIVATE",
           "availability": 유추 가능하면 "FREE" 또는 "BUSY", 불가능하면 "BUSY",
