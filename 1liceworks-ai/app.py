@@ -3,8 +3,7 @@ import os
 from flask import Flask, request, jsonify
 import google.generativeai as genai  # Google Gemini API
 import re
-from datetime import datetime, time, timedelta
-from dateutil import parser
+from datetime import datetime
 import pytz
 import json
 from dotenv import load_dotenv
@@ -35,31 +34,38 @@ def generate_schedule():
 
         prompt = f"""
         당신은 일정 생성 AI 비서입니다.
-        사용자가 입력한 내용을 분석하여 일정 정보를 추출하세요.
+        사용자가 입력한 내용을 분석하여 일정 정보를 최대한 유추하여 추출하세요.
         **반드시 한국 표준시(KST, UTC+9) 기준으로 변환해야 합니다.**
         오늘 날짜는 {now_kst_str} 입니다.
 
         ### 출력 형식 ###
         다음 JSON 형식으로 일정을 반환하세요:
         {{"title": "일정 제목",
-          "description": "설명 (없으면 빈 문자열)",
-          "startTime": "YYYY-MM-DDTHH:MM:SS",
-          "endTime": "YYYY-MM-DDTHH:MM:SS",
-          "allDay": false,
-          "location": "위치 (없으면 빈 문자열)"}}
+          "description": 유추 가능하면 해당 값, 불가능하면 null,
+          "dtStartTime": "YYYY-MM-DDTHH:MM:SS",
+          "dtEndTime": "YYYY-MM-DDTHH:MM:SS",
+          "isAllDay": 유추 가능하면 true 또는 false, 불가능하면 false,
+          "privacyType": 유추 가능하면 "PUBLIC" 또는 "PRIVATE", 불가능하면 "PRIVATE",
+          "availability": 유추 가능하면 "FREE" 또는 "BUSY", 불가능하면 "BUSY",
+          "location": 유추 가능하면 해당 값, 불가능하면 null,
+          "eventReminders": 유추 가능하면 해당 값, 불가능하면 [{{"notifyTime": dtStartTime 30분 전}}]}}
+
+        **프롬프트에서 제공되지 않은 값은 최대한 유추해보고, 유추할 수 없는 경우에만 기본값을 반환하세요.**
+        **isAllDay가 true인 경우 dtStartTime은 00:00:00, dtEndTime은 23:59:59로 설정하세요.**
 
         ### 예제 ###
-        입력: "오늘 오전 10시에 팀 회의 잡아줘"
+        입력: "오늘 오전 10시에 회의실 A에서 팀 회의 두시간 동안 잡아줘"
         출력: {{
-            "title": "팀 회의",
-            "description": "주간 회의",
-            "startTime": "2025-02-15T10:00:00",
-            "endTime": "2025-02-15T11:00:00",
-            "allDay": false,
-            "location": "회의실 A"
-        }}
-
-        **프롬프트에서 제공되지 않은 값은 빈 문자열("") 또는 null로 설정하세요.**
+          "title": "팀 회의",
+          "description": "팀 회의 입니다.",
+          "dtStartTime": "2025-02-25T10:00:00",
+          "dtEndTime": "2025-02-25T12:00:00",
+          "isAllDay": false,
+          "privacyType": "PUBLIC",
+          "availability": "BUSY",
+          "location": "회의실 A",
+          "eventReminders": [{{"notifyTime": "2025-02-25T10:00:00"}}]
+          }}
 
         ### 입력 ###
         입력: "{prompt_text}"
@@ -79,6 +85,7 @@ def generate_schedule():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 def create_find_free_time_prompt(calendars):
