@@ -72,7 +72,7 @@ def generate_schedule():
         JSON 형식으로 결과를 반환하세요:
         """
 
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel("gemini-2.0-flash-lite")
         response = model.generate_content(prompt)
 
         # Gemini 응답을 JSON으로 변환
