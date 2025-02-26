@@ -39,7 +39,7 @@ def generate_schedule():
         오늘 날짜는 {now_kst_str} 입니다.
 
         ### 출력 형식 ###
-        JSON 형식으로만 응답하세요. 추가적인 설명이나 코드 블록(```)을 포함하지 마세요.
+        반드시 순수 JSON 형식으로만 응답하세요. 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
         다음 JSON 형식으로 일정을 반환하세요:
         {{"title": "일정 제목" 유추 가능하면 해당 값 불가능하면 일정,
           "description": 유추 가능하면 해당 값, 불가능하면 null,
@@ -78,7 +78,8 @@ def generate_schedule():
 
         # Gemini 응답을 JSON으로 변환
         try:
-            result = json.loads(response.text)
+            cleaned_response = re.sub(r'```json|```', '', response.text).strip()
+            result = json.loads(cleaned_response)
         except json.JSONDecodeError:
             return jsonify({"error": "Failed to parse Gemini response as JSON", "raw_response": response.text}), 500
 
