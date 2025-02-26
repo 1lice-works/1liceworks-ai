@@ -90,82 +90,53 @@ def generate_schedule():
 
 
 
-def create_find_free_time_prompt(calendars):
-    """빈 시간 찾기 프롬프트 생성"""
-    calendar_json_str = json.dumps(calendars, indent=2, ensure_ascii=False)
-
-    prompt = f"""
-    당신은 일정 조정 AI 비서입니다.  
-    사용자의 일정 데이터를 분석하여 빈 시간을 찾아주세요.  
-    사용자의 근무 시간은 **09:00 ~ 18:00 (KST, UTC+9)** 입니다.  
-
-    **규칙**  
-    - `calendars`에 있는 모든 `events`를 병합하여 하나의 일정 목록을 만드세요.  
-    - `startTime` 기준으로 정렬한 후 **이전 일정의 `endTime`과 다음 일정의 `startTime` 사이의 빈 시간**을 계산하세요.  
-    - **근무 시간 (09:00 ~ 18:00) 내에서만 빈 시간을 반환**하세요.  
-    - JSON 형식으로 **코드 블록 없이** 결과를 반환하세요.  
-
-    ### 📌 **입력 데이터 예시**
-    {calendar_json_str}
-
-    ### 📌 **출력 형식 예시**
-    {{
-        "results": [
-            {{
-                "startTime": "2025-02-15T09:00:00",
-                "endTime": "2025-02-15T10:00:00"
-            }},
-            {{
-                "startTime": "2025-02-15T11:00:00",
-                "endTime": "2025-02-15T14:00:00"
-            }},
-            {{
-                "startTime": "2025-02-15T15:00:00",
-                "endTime": "2025-02-15T18:00:00"
-            }}
-        ]
-    }}
-    """
-    return prompt
-
-
-def clean_gemini_response(response_text):
-    """Gemini 응답에서 JSON만 추출"""
-    # ```json ... ``` 코드 블록 제거
-    json_match = re.search(r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL)
-    if json_match:
-        clean_json = json_match.group(1)
-    else:
-        clean_json = response_text.strip()
-
-    return clean_json
-
-
 @app.route('/find_free_time', methods=['POST'])
 def find_free_time():
-    """Gemini API를 사용하여 빈 시간 찾기"""
+    """ 일정 데이터를 받아 빈 시간을 찾아 반환 """
     try:
         data = request.get_json()
+        duration = data.get("duration", 60)
+        events = data.get("events", [])
 
-        # 캘린더 데이터 확인
-        calendars = data.get("calendars", [])
-        if not isinstance(calendars, list):
-            return jsonify({"error": "Invalid data format: 'calendars' must be a list"}), 400
+        if not events:
+            return jsonify({"freeTimeDtos": []})  # 일정이 없으면 빈 배열 반환
 
-        # Gemini 프롬프트 생성
-        prompt = create_find_free_time_prompt(calendars)
+        # JSON 데이터를 Gemini 프롬프트에 전달할 포맷으로 변환
+        formatted_events = [
+            f"이벤트: {event['title']}, 시작 시간: {event['dtStartTime']}, 종료 시간: {event['dtEndTime']}"
+            for event in events
+        ]
 
-        model = genai.GenerativeModel("gemini-pro")
+        prompt = f"""
+        당신은 일정 관리 AI 비서입니다. 사용자가 제공한 일정 목록을 분석하여 주어진 시간(duration) 이상 비어있는 시간을 찾아야 합니다.
+        사용자가 요청한 빈 시간은 {duration}분 이상입니다.
+
+        ### 제공된 일정 ###
+        {formatted_events}
+
+        ### 출력 형식 ###
+        JSON 형식으로 응답하세요. 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
+        다음과 같은 형식으로 응답하세요:
+        {{
+          "freeTimeDtos": [
+            {{"startTime": "yyyy-MM-dd'T'HH:mm:ss", "endTime": "yyyy-MM-dd'T'HH:mm:ss"}},
+            ...
+          ]
+        }}
+
+        **한국 표준시(KST, UTC+9) 기준으로 날짜 및 시간을 변환해야 합니다.**
+        """
+
+        # Gemini API 호출
+        model = genai.GenerativeModel("gemini-2.0-flash-lite")
         response = model.generate_content(prompt)
 
-        # 응답에서 JSON 데이터만 추출
-        clean_json = clean_gemini_response(response.text)
-
-        # JSON 변환
+        # Gemini 응답을 JSON으로 변환
         try:
-            result = json.loads(clean_json)
+            cleaned_response = re.sub(r'```json|```', '', response.text).strip()
+            result = json.loads(cleaned_response)
         except json.JSONDecodeError:
-            return jsonify({"error": "Failed to parse Gemini response", "raw_response": response.text}), 500
+            return jsonify({"error": "Failed to parse Gemini response as JSON", "raw_response": response.text}), 500
 
         return jsonify(result)
 
