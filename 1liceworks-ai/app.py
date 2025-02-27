@@ -92,39 +92,54 @@ def generate_schedule():
 
 @app.route('/find_free_time', methods=['POST'])
 def find_free_time():
-    """ 일정 데이터를 받아 빈 시간을 찾아 반환 """
+    """Gemini API를 사용하여 빈 시간 찾기"""
     try:
         data = request.get_json()
-        duration = data.get("duration", 60)
+
+        # 요청 데이터 추출
+        date = data.get("date")  # YYYY-MM-DD 형식
+        duration = data.get("duration", 60)  # 최소 빈 시간 (기본값: 60분)
         events = data.get("events", [])
 
-        if not events:
-            return jsonify({"freeTimeDtos": []})  # 일정이 없으면 빈 배열 반환
+        if not date:
+            return jsonify({"error": "Missing required field: date"}), 400
 
-        # JSON 데이터를 Gemini 프롬프트에 전달할 포맷으로 변환
+        # ✅ events가 빈 리스트라면 해당 date 전체를 빈 시간으로 응답
+        if not events:
+            return jsonify({
+                "freeTimeDtos": [
+                    {
+                        "startTime": f"{date}T00:00:00",
+                        "endTime": f"{date}T23:59:59"
+                    }
+                ]
+            })
+
+        # JSON 데이터를 프롬프트에 전달할 포맷으로 변환
         formatted_events = [
             f"이벤트: {event['title']}, 시작 시간: {event['dtStartTime']}, 종료 시간: {event['dtEndTime']}"
             for event in events
         ]
 
+        # 프롬프트 수정
         prompt = f"""
-        당신은 일정 관리 AI 비서입니다. 사용자가 제공한 일정 목록을 분석하여 주어진 시간(duration) 이상 비어있는 시간을 찾아야 합니다.
-        사용자가 요청한 빈 시간은 {duration}분 이상입니다.
+        당신은 일정 관리 AI 비서입니다. 사용자가 제공한 일정 목록을 분석하여 빈 시간을 찾아야 합니다.
+
+        **요구사항:**
+        1. 사용자가 요청한 날짜({date})의 **00:00:00 ~ 23:59:59** 사이에서만 빈 시간을 찾습니다.
+        2. **{duration}분 이상** 연속된 빈 시간만 포함해야 합니다.
+        3. 빈 시간이 없을 경우 `{ { "startTime": "", "endTime": "" } }` 형식으로 응답해야 합니다.
 
         ### 제공된 일정 ###
         {formatted_events}
 
         ### 출력 형식 ###
         JSON 형식으로 응답하세요. 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
-        다음과 같은 형식으로 응답하세요:
         {{
           "freeTimeDtos": [
-            {{"startTime": "yyyy-MM-dd'T'HH:mm:ss", "endTime": "yyyy-MM-dd'T'HH:mm:ss"}},
-            ...
+            {{"startTime": "yyyy-MM-dd'T'HH:mm:ss", "endTime": "yyyy-MM-dd'T'HH:mm:ss"}}
           ]
         }}
-
-        **한국 표준시(KST, UTC+9) 기준으로 날짜 및 시간을 변환해야 합니다.**
         """
 
         # Gemini API 호출
