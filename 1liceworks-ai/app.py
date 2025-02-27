@@ -126,15 +126,20 @@ def find_free_time():
         당신은 일정 관리 AI 비서입니다. 사용자가 제공한 일정 목록을 분석하여 빈 시간을 찾아야 합니다.
 
         **요구사항:**
-        1. 사용자가 요청한 날짜({date})의 **00:00:00 ~ 23:59:59** 사이에서만 빈 시간을 찾습니다.
-        2. **빈 시간은 {duration}분 이상이어야 하며, 이보다 짧은 시간은 절대 포함하지 마세요.**
+        1. 사용자가 요청한 날짜({date})의 **09:00:00 ~ 20:00:00** 사이에서만 빈 시간을 찾습니다.
+        2. **빈 시간은 {duration}분 단위로 나누어 제공해야 하며, 이보다 짧은 시간은 절대 포함하지 마세요.**
         3. **빈 시간이 없을 경우 `freeTimeDtos: []` 형식으로 응답하세요.**
-        4. 빈 시간의 종료 시간은 반드시 `{date}T23:59:59` 이하로 설정해야 합니다.
-        5. `{date}T23:59:59` 이후의 시간은 절대 포함하지 마세요.
+        4. **빈 시간의 종료 시간은 반드시 `{date}T20:00:00` 이하로 설정해야 합니다.**
+        5. `{date}T20:00:00` 이후의 시간은 절대 포함하지 마세요.
         6. 응답은 JSON 형식으로 제공하며, 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
 
         ### 제공된 일정 ###
         {formatted_events}
+
+        ### 예제 ###
+        만약 일정이 아래와 같고, duration이 60분일 경우:
+        - 일정: 09:00 ~ 10:00, 12:00 ~ 14:00, 17:00 ~ 19:00
+        - 원하는 출력: 10:00 ~ 11:00, 11:00 ~ 12:00, 14:00 ~ 15:00, 15:00 ~ 16:00, 16:00 ~ 17:00, 19:00 ~ 20:00
 
         ### 출력 형식 ###
         {{
@@ -153,36 +158,14 @@ def find_free_time():
             cleaned_response = response.text.strip("```json").strip("```").strip()
             result = json.loads(cleaned_response)
 
-            # ✅ 빈 시간 필터링 및 23:59:59 초과 조정
-            filtered_free_times = []
-            for time_slot in result.get("freeTimeDtos", []):
-                start_time = time_slot["startTime"]
-                end_time = time_slot["endTime"]
+            # ✅ Gemini가 반환한 빈 시간을 그대로 사용
+            free_times = result.get("freeTimeDtos", [])
 
-                if not start_time or not end_time:
-                    continue  # 빈 값이면 무시
-
-                # ✅ 23:59:59 이후로 넘어가면 강제 수정
-                start_dt = datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%S")
-                end_dt = datetime.strptime(end_time, "%Y-%m-%dT%H:%M:%S")
-                max_end_dt = datetime.strptime(f"{date}T23:59:59", "%Y-%m-%dT%H:%M:%S")
-
-                if end_dt > max_end_dt:
-                    end_dt = max_end_dt
-
-                # ✅ duration 이상인지 검증 후 필터링
-                diff_minutes = (end_dt - start_dt).total_seconds() / 60  # 분 단위 차이
-                if diff_minutes >= duration:
-                    filtered_free_times.append({
-                        "startTime": start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-                        "endTime": end_dt.strftime("%Y-%m-%dT%H:%M:%S")
-                    })
-
-            # 빈 시간이 없다면 빈 배열 반환
-            return jsonify({"freeTimeDtos": filtered_free_times})
+            return jsonify({"freeTimeDtos": free_times})
 
         except json.JSONDecodeError:
             return jsonify({"error": "Failed to parse Gemini response as JSON", "raw_response": response.text}), 500
+
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
