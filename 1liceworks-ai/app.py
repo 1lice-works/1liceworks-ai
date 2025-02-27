@@ -121,20 +121,23 @@ def find_free_time():
             for event in events
         ]
 
-        # 프롬프트 수정
+        # ✅ 프롬프트 개선 (duration 체크 추가)
         prompt = f"""
         당신은 일정 관리 AI 비서입니다. 사용자가 제공한 일정 목록을 분석하여 빈 시간을 찾아야 합니다.
 
         **요구사항:**
         1. 사용자가 요청한 날짜({date})의 **00:00:00 ~ 23:59:59** 사이에서만 빈 시간을 찾습니다.
-        2. **{duration}분 이상** 연속된 빈 시간만 포함해야 합니다.
-        3. 빈 시간이 없을 경우 `{ { "startTime": "", "endTime": "" } }` 형식으로 응답해야 합니다.
+        2. **{duration}분(= {duration // 60}시간) 이상 연속된 빈 시간**만 포함해야 합니다.
+        3. 빈 시간이 **{duration}분 미만**이면 절대 포함하지 말고, 해당 시간을 무시하세요.
+        4. **빈 시간이 없을 경우 `{ { "startTime": "", "endTime": "" } }` 형식으로 응답해야 합니다.**
+        5. **빈 시간의 종료 시간은 반드시 {date}T23:59:59 이하로 설정해야 합니다.**
+        6. **{date}T23:59:59 이후의 시간은 절대 포함하지 마세요.**
+        7. 응답은 JSON 형식으로 제공하며, 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
 
         ### 제공된 일정 ###
         {formatted_events}
 
         ### 출력 형식 ###
-        JSON 형식으로 응답하세요. 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
         {{
           "freeTimeDtos": [
             {{"startTime": "yyyy-MM-dd'T'HH:mm:ss", "endTime": "yyyy-MM-dd'T'HH:mm:ss"}}
@@ -150,10 +153,39 @@ def find_free_time():
         try:
             cleaned_response = re.sub(r'```json|```', '', response.text).strip()
             result = json.loads(cleaned_response)
+
+            # ✅ 23:59:59 이후로 넘어가는 시간이 있으면 강제로 수정 & duration 검증
+            filtered_free_times = []
+            for time_slot in result.get("freeTimeDtos", []):
+                start_time = time_slot["startTime"]
+                end_time = time_slot["endTime"]
+
+                if not start_time or not end_time:
+                    continue  # 빈 값이면 무시
+
+                # ✅ 23:59:59 이후로 넘어가면 강제 수정
+                if end_time > f"{date}T23:59:59":
+                    end_time = f"{date}T23:59:59"
+
+                # ✅ duration 이상인지 검증 후 필터링
+                start_dt = datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%S")
+                end_dt = datetime.strptime(end_time, "%Y-%m-%dT%H:%M:%S")
+                diff_minutes = (end_dt - start_dt).total_seconds() / 60  # 분 단위 차이
+
+                if diff_minutes >= duration:
+                    filtered_free_times.append({
+                        "startTime": start_time,
+                        "endTime": end_time
+                    })
+
+            # 빈 시간이 없다면 빈 객체 반환
+            if not filtered_free_times:
+                return jsonify({"freeTimeDtos": [{"startTime": "", "endTime": ""}]})
+
+            return jsonify({"freeTimeDtos": filtered_free_times})
+
         except json.JSONDecodeError:
             return jsonify({"error": "Failed to parse Gemini response as JSON", "raw_response": response.text}), 500
-
-        return jsonify(result)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
