@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 import google.generativeai as genai  # Google Gemini API
 import re
 from datetime import datetime
+from dateutil.parser import parse
 import pytz
 import json
 from dotenv import load_dotenv
@@ -131,16 +132,16 @@ def find_free_time():
         3. **빈 시간이 없을 경우 `freeTimeDtos: []` 형식으로 응답하세요.**
         4. **빈 시간의 종료 시간은 반드시 `{date}T20:00:00` 이하로 설정해야 합니다.**
         5. `{date}T20:00:01` 이후의 시간은 절대 포함하지 마세요.
-        6. 응답은 JSON 형식으로 제공하며, 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
+        6. **각 빈 시간이 반드시 요청한 `duration`(단위: 분)에 맞는지 확인하고, 이 조건을 만족하지 않는 빈 시간은 제외하세요.**
+        7. 응답은 JSON 형식으로 제공하며, 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
 
         ### 제공된 일정 ###
         {formatted_events}
 
         ### 예제 ###
         만약 일정이 아래와 같고, duration이 60분일 경우:
-        - 일정: 09:00 ~ 10:00, 12:00 ~ 14:00, 17:00 ~ 19:00
-        - 원하는 출력: 10:00 ~ 11:00, 11:00 ~ 12:00, 14:00 ~ 15:00, 15:00 ~ 16:00, 16:00 ~ 17:00, 19:00 ~ 20:00
-
+        - 일정: 08:00 ~ 10:00, 10:00 ~ 11:00, 12:00 ~ 13:00, 14:00 ~ 16:00, 16:30 ~ 17:30, 18:00 ~ 19:00
+        - 원하는 출력: 11:00 ~ 12:00, 13:00 ~ 14:00, 19:00 ~ 20:00
         ### 출력 형식 ###
         {{
           "freeTimeDtos": [
@@ -161,7 +162,13 @@ def find_free_time():
             # ✅ Gemini가 반환한 빈 시간을 그대로 사용
             free_times = result.get("freeTimeDtos", [])
 
-            return jsonify({"freeTimeDtos": free_times})
+            # **빈 시간이 duration에 맞지 않는 항목을 제외**
+            valid_free_times = [
+                free_time for free_time in free_times
+                if (parse(free_time['endTime']) - parse(free_time['startTime'])).seconds >= duration * 60
+            ]
+
+            return jsonify({"freeTimeDtos": valid_free_times})
 
         except json.JSONDecodeError:
             return jsonify({"error": "Failed to parse Gemini response as JSON", "raw_response": response.text}), 500
