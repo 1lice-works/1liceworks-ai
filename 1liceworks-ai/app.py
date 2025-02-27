@@ -109,8 +109,8 @@ def find_free_time():
             return jsonify({
                 "freeTimeDtos": [
                     {
-                        "startTime": f"{date}T00:00:00",
-                        "endTime": f"{date}T23:59:59"
+                        "startTime": f"{date}T09:00:00",
+                        "endTime": f"{date}T20:00:00"
                     }
                 ]
             })
@@ -130,7 +130,7 @@ def find_free_time():
         2. **빈 시간은 {duration}분 단위로 나누어 제공해야 하며, 이보다 짧은 시간은 절대 포함하지 마세요.**
         3. **빈 시간이 없을 경우 `freeTimeDtos: []` 형식으로 응답하세요.**
         4. **빈 시간의 종료 시간은 반드시 `{date}T20:00:00` 이하로 설정해야 합니다.**
-        5. `{date}T20:00:00` 이후의 시간은 절대 포함하지 마세요.
+        5. `{date}T20:00:01` 이후의 시간은 절대 포함하지 마세요.
         6. 응답은 JSON 형식으로 제공하며, 추가적인 설명이나 코드 블록(```json ... ```)을 포함하지 마세요.
 
         ### 제공된 일정 ###
