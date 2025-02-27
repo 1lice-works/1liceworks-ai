@@ -1,7 +1,7 @@
 import os
 
 from flask import Flask, request, jsonify
-import google.generativeai as genai  # Google Gemini API
+import google.generativeai as genai
 import re
 from datetime import datetime
 from dateutil.parser import parse
@@ -11,17 +11,15 @@ from dotenv import load_dotenv
 
 app = Flask(__name__)
 
-# Gemini API 키 설정
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 한국 시간대 설정
 KST = pytz.timezone("Asia/Seoul")
 
 @app.route('/generate_schedule', methods=['POST'])
 def generate_schedule():
-    """ 사용자의 입력을 기반으로 일정 생성 (한국 시간 기준 변환) """
+    """ 사용자의 입력을 기반으로 일정 생성 (한국 시간 기준) """
     try:
         data = request.get_json()
         prompt_text = data.get("prompt", "")
@@ -29,7 +27,6 @@ def generate_schedule():
         if not prompt_text:
             return jsonify({"error": "No prompt provided"}), 400
 
-        # 현재 한국 시간 계산
         now_kst = datetime.now(KST)
         now_kst_str = now_kst.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -105,7 +102,7 @@ def find_free_time():
         if not date:
             return jsonify({"error": "Missing required field: date"}), 400
 
-        # ✅ events가 빈 리스트라면 해당 date 전체를 빈 시간으로 응답
+        # events가 빈 리스트라면 해당 date 전체를 빈 시간으로 응답
         if not events:
             return jsonify({
                 "freeTimeDtos": [
@@ -122,7 +119,6 @@ def find_free_time():
             for event in events
         ]
 
-        # ✅ 프롬프트 개선 (duration 체크 추가)
         prompt = f"""
         당신은 일정 관리 AI 비서입니다. 사용자가 제공한 일정 목록을 분석하여 빈 시간을 찾아야 합니다.
 
@@ -150,16 +146,14 @@ def find_free_time():
         }}
         """
 
-        # Gemini API 호출
         model = genai.GenerativeModel("gemini-2.0-flash-lite")
         response = model.generate_content(prompt)
 
-        # ✅ Gemini 응답을 JSON으로 변환
+        # Gemini 응답을 JSON으로 변환
         try:
             cleaned_response = response.text.strip("```json").strip("```").strip()
             result = json.loads(cleaned_response)
 
-            # ✅ Gemini가 반환한 빈 시간을 그대로 사용
             free_times = result.get("freeTimeDtos", [])
 
             # **빈 시간이 duration에 맞지 않는 항목을 제외**
